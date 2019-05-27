@@ -32,7 +32,6 @@ def get_hana_connection_details(user: str, pwd: str, host: str, port: str):
     Returns:
         user_value, pwd_value, host_value, port_value (str)
     """
-    load_env()
     user_value = os.getenv(user)
     pwd_value = os.getenv(pwd)
     host_value = os.getenv(host)
@@ -61,18 +60,24 @@ def create_hana_engine(user: str, pwd: str, host: str, port: str,
                                                             port)
 
     connection_string = 'hana+pyhdb://{}:{}@{}:{}/'.format(user, pwd, host, port)
-    print('Connecting to: {}...'.format(host))
+    print(connection_string)
 
-    try:
-        engine = create_engine(connection_string)
-        engine.connect()
-    except ValueError as val_e:
-        print('{}: likely port to be incorrect.'.format(val_e))
-    except Exception as general_e:
-        print(general_e)
+    if None in (user, pwd, host, port):
+        print('Connection detail loaded incorrectly, please check .env is '
+              'loaded.')
     else:
-        print('Connection successful. Engine create as: {}'.format(engine))
-        return engine
+        print('Connecting to: {}...'.format(host))
+
+        try:
+            engine = create_engine(connection_string)
+            engine.connect()
+        except ValueError as val_e:
+            print('{}: likely port to be incorrect.'.format(val_e))
+        except Exception as general_e:
+            print(general_e)
+        else:
+            print('Connection successful. Engine create as: {}'.format(engine))
+            return engine
 
 def get_sqlserver_connection_details(server: str) -> str:
     """
