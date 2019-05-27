@@ -1,0 +1,5 @@
+user='my_user'
+password='mypwd'
+host='192.168.1.1'
+port='8080'
+server='my_server'
