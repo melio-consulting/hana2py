@@ -1,6 +1,7 @@
 '''This module creates the flattened hierarchy table from SAP BW'''
 
 import json
+import pkg_resources
 import pandas as pd
 from hana2py import utilities as u
 
@@ -9,16 +10,19 @@ class HierarchyTable():
     Class to generate a flattened hierarchy table from a hierarchy in SAP BW.
     """
 
-    def __init__(self, hierarchy, generated_table_schema, engine):
+    def __init__(self, hierarchy, generated_table_schema, engine,
+                 hierarchy_version='data/hierarchy_version.json'):
 
         self.hierarchy = hierarchy
         self.engine = engine
         self.generated_table_schema = generated_table_schema
+        self.hierarchy_version = hierarchy_version
 
-        with open('hana2py/hierarchy_versions.json', 'r') as hierarchy_file:
+        with open(self.hierarchy_version, 'r') as hierarchy_file:
             hierarchy_info = json.load(hierarchy_file)
 
-        self._query_file = 'hana2py/create_table_base_query.sql'
+        self._query_file = pkg_resources.resource_filename(
+            'hana2py', 'create_table_base_query.sql')
 
         self._hieid = hierarchy_info.get(self.hierarchy).get('hieid')
         self.schema_name = hierarchy_info.get(self.hierarchy).get('schema_name')
@@ -156,7 +160,7 @@ class HierarchyTable():
         query = query.replace('MAIN_TABLE_QUERY_HERE', main_table_query)
         query = query.replace('SCHEMA_NAME_HERE', self.schema_name)
 
-        query_file = '/opt/play/hana2py/src/create_{}_query.sql'.format(
+        query_file = 'create_{}_query.sql'.format(
             self.generated_table_name.lower())
 
         with open(query_file, 'w+') as file:
@@ -175,7 +179,6 @@ class HierarchyTable():
         message = f'Table {self.generated_table_name} has been created.'
 
         u.execute_query(self.engine, query, message)
-        print('after create table')
 
 
     def get_hierarchy_table(self, top_n=None):

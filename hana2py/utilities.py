@@ -60,7 +60,6 @@ def create_hana_engine(user: str, pwd: str, host: str, port: str,
                                                             port)
 
     connection_string = 'hana+pyhdb://{}:{}@{}:{}/'.format(user, pwd, host, port)
-    print(connection_string)
 
     if None in (user, pwd, host, port):
         print('Connection detail loaded incorrectly, please check .env is '

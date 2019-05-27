@@ -1,0 +1,18 @@
+{
+    "hierarchy_shortname1": {
+        "full_name": "Hierarchy Full Name",
+        "info_object": "Info Object Name",
+        "table_name": "schema_name.table_name",
+        "tech_name": "Info Object Technical Name",
+        "hieid": "Hierarchy ID",
+        "schema_name": "Schema Name"
+    },
+    "hierarchy_shortname2": {
+        "full_name": "Hierarchy Full Name",
+        "info_object": "Info Object Name",
+        "table_name": "schema_name.table_name",
+        "tech_name": "Info Object Technical Name",
+        "hieid": "Hierarchy ID",
+        "schema_name": "Schema Name"
+    }
+}

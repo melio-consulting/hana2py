@@ -1,1 +1,3 @@
 include hana2py/data/iris.csv
+include hana2py/data/hierarchy_version.json
+include hana2py/create_table_base_query.sql
