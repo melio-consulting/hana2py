@@ -4,6 +4,8 @@ import os
 import math
 import urllib
 import warnings
+import numpy as np
+import pandas as pd
 from dotenv import load_dotenv, find_dotenv
 from sqlalchemy import create_engine, exc
 
@@ -184,6 +186,55 @@ def execute_query(engine, query, message, retry=0):
                 execute_query(query, message, retry)
             else:
                 print({e})
+
+def analyse_dataframe(df: pd.DataFrame, n: int = 100):
+    """
+    Description:
+        Give simple statistics on a pandas dataframe based on the
+    column data type.
+
+    Parameters:
+        df (pd.DataFrame): The pandas dataframe to be analysed.
+        n (int): The number of items to be printed out for objects and
+        category types.
+    """
+
+    date_cols = df.select_dtypes('datetime').columns
+    obj_cols = df.select_dtypes('object').columns
+    num_cols = df.select_dtypes(['number']).columns
+    cat_cols = df.select_dtypes(['category']).columns
+
+    print("*---------- Datetime ----------*")
+    for date_col in date_cols:
+        print(f"  The date range for {date_col} is "
+              f"{df[date_col].min()} - {df[date_col].max()}" \
+              f" with {len(df[date_col].drop_duplicates())} distinct values.")
+
+    print("*---------- Objects ----------*")
+    for obj_col in obj_cols:
+        types = df[obj_col].drop_duplicates().tolist()
+        types = [t for t in types if t not in [None, np.nan]]
+        num = len(types)
+        if num > n:
+            print(f"  {obj_col} has {num} items, the top {n} include \n"
+                  f"\t {', '.join(types[:n])} \n")
+        else:
+            print(f"  {obj_col} has {num} items, include \n"
+                  f"\t {', '.join(types[:n])} \n")
+
+    print("*---------- Category ----------*")
+    for cat_col in cat_cols:
+        types = df[cat_col].drop_duplicates().tolist()
+        num = len(types)
+        if num > n:
+            print(f"  {cat_col} has {num} items, the top {n} include: \n "
+                  f"\t {', '.join(types)} \n")
+        else:
+            print(f"  {cat_col} has {num} items, include: \n "
+                  f"\t {', '.join(types)} \n")
+
+    print("*---------- Numeric ----------*")
+    print(df[num_cols].describe())
 
 
 if __name__ == "__main__":
