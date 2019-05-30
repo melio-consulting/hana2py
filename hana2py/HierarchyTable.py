@@ -132,6 +132,15 @@ class HierarchyTable():
 
         return query
 
+    def _get_node_text(self):
+        NODETEXT = f'select *, case when node_text is null then case\n'
+        for level in range(2, self.highest_level + 1):
+            tlevel = [str(level) if level > 9 else '0' + str(level)][0]
+            NODETEXT += f'\t\twhen tlevel=\'{tlevel}\' then t{level - 1}\n'
+
+        NODETEXT += '\t\telse null end \n\t else node_text end as NODETEXT'
+
+        return NODETEXT
 
     def _create_hierarchy_table_query(self):
         select_text = ''
@@ -149,6 +158,7 @@ class HierarchyTable():
                               f'ON T{level}.NODENAME = h.L{level}'
 
         select_text = select_text[:-1]
+        node_text = self._get_node_text()
 
         query = query.replace('SELECT_TEXT_HERE', select_text)
         query = query.replace('HIEID_HERE', '\'' + self._hieid + '\'')
@@ -159,6 +169,8 @@ class HierarchyTable():
         query = query.replace('LEFT_JOIN_TEXT_HERE', left_join_text)
         query = query.replace('MAIN_TABLE_QUERY_HERE', main_table_query)
         query = query.replace('SCHEMA_NAME_HERE', self.schema_name)
+
+        query = query.replace('NODE_TEXT_LOOP_HERE', node_text)
 
         query_file = 'create_{}_query.sql'.format(
             self.generated_table_name.lower())

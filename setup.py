@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='hana2py',
-      version='0.1dev',
+      version='0.1',
       packages=['hana2py'],
       license='MIT',
       # long_description=open('README.md').read(),
