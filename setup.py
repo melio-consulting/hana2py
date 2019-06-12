@@ -14,7 +14,8 @@ setup(name='hana2py',
             'pympler',
             'sqlalchemy-hana',
             'numpy',
-            'pandas'
+            'pandas',
+            'tqdm'
       ],
       test_suite='nose.collector',
       tests_require=['nose'],

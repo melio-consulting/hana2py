@@ -6,6 +6,8 @@ import urllib
 import warnings
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
+from datetime import datetime
 from dotenv import load_dotenv, find_dotenv
 from sqlalchemy import create_engine, exc
 
@@ -236,6 +238,51 @@ def analyse_dataframe(df: pd.DataFrame, n: int = 100):
     print("*---------- Numeric ----------*")
     print(df[num_cols].describe())
 
+def chunker(seq, size):
+    return (seq[pos:pos + size] for pos in range(0, len(seq), size))
+
+def to_sql_with_progress(df, engine, schema, table_name,
+                         chunksize=10000, if_exist='append'):
+    """
+    Description:
+        Insert a dataframe into the defined SQL database with a progress bar.
+    Parameters:
+        df (pd.DataFrame): the dataframe to be inserted
+        engine (sqlalchemy.engine.base.Engine): the connection to the database
+        schema (str): the schema name the dataframe is inserted in
+        table_name (str): the SQL table name the dataframe is inserted in
+        chunksize (int): the number of rows each insert, default=10000
+        if_exist (str): 'replace', or 'append'
+    """
+
+
+    df.loc[:, 'created_at'] = datetime.strftime(datetime.now(), '%Y%m%d')
+
+    with tqdm(total=len(df)) as progress_bar:
+        for i, cdf in enumerate(chunker(df, chunksize)):
+            cdf.to_sql(con=engine,
+                       schema=schema,
+                       name=table_name,
+                       index=False,
+                       if_exists=if_exist)
+            progress_bar.update(chunksize)
+
+
+def read_sql_with_progress(query, engine, table_name, chunksize=10000):
+    n_row = \
+    pd.read_sql(f'select count(*) from {table_name}', con=engine).loc[0][0]
+    total_iter = math.ceil(n_row / chunksize)
+
+    df = pd.DataFrame()
+    with tqdm(total=total_iter) as progress_bar:
+        for i in range(0, total_iter):
+            cdf = pd.read_sql(query, con=engine)
+            df = pd.concat([df, cdf])
+            progress_bar.update(chunksize)
+
+    return df
+
 
 if __name__ == "__main__":
     pass
+
