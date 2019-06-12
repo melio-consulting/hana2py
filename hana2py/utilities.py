@@ -10,6 +10,7 @@ from tqdm import tqdm
 from datetime import datetime
 from dotenv import load_dotenv, find_dotenv
 from sqlalchemy import create_engine, exc
+from sqlalchemy.types import NVARCHAR
 
 MILLNAMES = ['', 'k', 'mn', 'bn', 'tn']
 
@@ -241,7 +242,7 @@ def analyse_dataframe(df: pd.DataFrame, n: int = 100):
 def chunker(seq, size):
     return (seq[pos:pos + size] for pos in range(0, len(seq), size))
 
-def to_sql_with_progress(df, engine, schema, table_name,
+def to_sql_with_progress(df, engine, schema, table_name, dtypes=None,
                          chunksize=10000, if_exist='append'):
     """
     Description:
@@ -257,15 +258,26 @@ def to_sql_with_progress(df, engine, schema, table_name,
 
 
     df.loc[:, 'created_at'] = datetime.strftime(datetime.now(), '%Y%m%d')
+    dtypes['created_at'] = NVARCHAR(length=255)
 
     with tqdm(total=len(df)) as progress_bar:
-        for i, cdf in enumerate(chunker(df, chunksize)):
-            cdf.to_sql(con=engine,
-                       schema=schema,
-                       name=table_name,
-                       index=False,
-                       if_exists=if_exist)
-            progress_bar.update(chunksize)
+        if dtypes is None:
+            for i, cdf in enumerate(chunker(df, chunksize)):
+                cdf.to_sql(con=engine,
+                           schema=schema,
+                           name=table_name,
+                           index=False,
+                           if_exists=if_exist)
+                progress_bar.update(chunksize)
+        else:
+            for i, cdf in enumerate(chunker(df, chunksize)):
+                cdf.to_sql(con=engine,
+                           schema=schema,
+                           name=table_name,
+                           index=False,
+                           dtype=dtypes,
+                           if_exists=if_exist)
+                progress_bar.update(chunksize)
 
 
 def read_sql_with_progress(query, engine, table_name, chunksize=10000):
