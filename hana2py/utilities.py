@@ -258,7 +258,9 @@ def to_sql_with_progress(df, engine, schema, table_name, dtypes=None,
 
 
     df.loc[:, 'created_at'] = datetime.strftime(datetime.now(), '%Y%m%d')
-    dtypes['created_at'] = NVARCHAR(length=255)
+
+    if dtypes is not None:
+        dtypes['created_at'] = NVARCHAR(length=255)
 
     with tqdm(total=len(df)) as progress_bar:
         if dtypes is None:
