@@ -175,7 +175,6 @@ def execute_query(engine, query, message, retry=0):
     """
 
     if retry < 3:
-        print(retry)
         try:
             con = engine.connect()
             con.execute(query)
@@ -257,7 +256,8 @@ def to_sql_with_progress(df, engine, schema, table_name, dtypes=None,
     """
 
 
-    df.loc[:, 'created_at'] = datetime.strftime(datetime.now(), '%Y%m%d')
+    df.loc[:, 'created_at'] = datetime.strftime(datetime.now(),
+                                                '%Y-%m-%d %H:%M:%S')
 
     if dtypes is not None:
         dtypes['created_at'] = NVARCHAR(length=255)
