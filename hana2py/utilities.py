@@ -24,6 +24,7 @@ def load_env():
     except Exception as general_e:
         print(general_e)
 
+
 def get_hana_connection_details(user: str, pwd: str, host: str, port: str):
     """
     Get Hana database credentials from .env file.
@@ -44,12 +45,14 @@ def get_hana_connection_details(user: str, pwd: str, host: str, port: str):
 
     return user_value, pwd_value, host_value, port_value
 
+
 def create_hana_engine(user: str, pwd: str, host: str, port: str,
-                       use_env: bool = True):
+                       use_env: bool = True, charset: str = 'utf8'):
     """
     Description:
         Creating a Hana engine connecting to the given database.
-        This function accepts both using the env_path to authenticate given the correct keys,
+        This function accepts both using the env_path to authenticate given 
+        the correct keys,
         or provide values as function arguments.
     Parameters:
         user (str): if env_path is given, use the key defined;
@@ -61,10 +64,11 @@ def create_hana_engine(user: str, pwd: str, host: str, port: str,
     """
 
     if use_env is not None:
-        user, pwd, host, port = get_hana_connection_details(user, pwd, host,
-                                                            port)
+        user, pwd, host, port = get_hana_connection_details(
+            user, pwd, host, port)
 
-    connection_string = 'hana+pyhdb://{}:{}@{}:{}/'.format(user, pwd, host, port)
+    connection_string = 'hana+pyhdb://' + \
+                        f'{user}:{pwd}@{host}:{port}/?charset={charset}'
 
     if None in (user, pwd, host, port):
         print('Connection detail loaded incorrectly, please check .env is '
@@ -103,7 +107,8 @@ def create_sqlserver_engine(server: str, database: str, use_env: bool = True, \
     """
     Description:
         Creating a SQL Server engine given server and database.
-        This function requires a trusted connection with Kerberos as well as a valid .env file.
+        This function requires a trusted connection with Kerberos as well as a 
+        valid .env file.
         The default is ODBC Driver for SQL Server.
     Parameters:
         server (str): server key in the env file
@@ -238,11 +243,12 @@ def analyse_dataframe(df: pd.DataFrame, n: int = 100):
     print("*---------- Numeric ----------*")
     print(df[num_cols].describe())
 
+
 def chunker(seq, size):
     return (seq[pos:pos + size] for pos in range(0, len(seq), size))
 
-def to_sql_with_progress(df, engine, schema, table_name, dtypes=None,
-                         chunksize=10000, if_exist='append'):
+def to_sql_with_progress(df, engine, schema, table_name, ind=False, 
+                        dtypes=None, chunksize=10000, if_exist='append'):
     """
     Description:
         Insert a dataframe into the defined SQL database with a progress bar.
@@ -255,44 +261,65 @@ def to_sql_with_progress(df, engine, schema, table_name, dtypes=None,
         if_exist (str): 'replace', or 'append'
     """
 
+    def df_to_sql(cdf, engine, schema, table_name, ind, if_exist, chunksize, 
+        dtype=None):
+        if dtype is None:
+            cdf.to_sql(
+                con=engine,
+                schema=schema,
+                name=table_name,
+                index=ind,
+                if_exists=if_exist)
+        else: 
+            cdf.to_sql(
+                con=engine,
+                schema=schema,
+                name=table_name,
+                index=ind,
+                if_exists=if_exist,
+                dtype=dtypes)
 
-    df.loc[:, 'created_at'] = datetime.strftime(datetime.now(),
-                                                '%Y-%m-%d %H:%M:%S')
-
-    if dtypes is not None:
-        dtypes['created_at'] = NVARCHAR(length=255)
+        progress_bar.update(chunksize)
 
     with tqdm(total=len(df)) as progress_bar:
         if dtypes is None:
             for i, cdf in enumerate(chunker(df, chunksize)):
-                cdf.to_sql(con=engine,
-                           schema=schema,
-                           name=table_name,
-                           index=False,
-                           if_exists=if_exist)
-                progress_bar.update(chunksize)
+                try:
+                    df_to_sql(
+                        cdf, engine, schema, table_name, ind, if_exist, 
+                        chunksize)
+                except Exception as error:
+                    if 'BrokenPipeError' in error.args[0]:
+                        print(f'BrokenPipeError: {error}. \n Retrying...')
+                        df_to_sql(
+                            cdf, engine, schema, table_name, ind, if_exist, 
+                            chunksize)
+                    else:
+                        print(f'Unexpected error occurred: {error}')
+
         else:
             for i, cdf in enumerate(chunker(df, chunksize)):
-                cdf.to_sql(con=engine,
-                           schema=schema,
-                           name=table_name,
-                           index=False,
-                           dtype=dtypes,
-                           if_exists=if_exist)
-                progress_bar.update(chunksize)
+                try:
+                    df_to_sql(
+                        cdf, engine, schema, table_name, ind, if_exist, 
+                        chunksize, dtypes)
+                except Exception as error:
+                    if 'BrokenPipeError' in error.args[0]:
+                        print(f'BrokenPipeError: {error}. \n Retrying...')
+                        df_to_sql(
+                            cdf, engine, schema, table_name, ind, if_exist, 
+                            chunksize, dtypes)
+                    else:
+                        print(f'Unexpected error occurred: {error}')
 
 
-def read_sql_with_progress(query, engine, table_name, chunksize=10000):
-    n_row = \
-    pd.read_sql(f'select count(*) from {table_name}', con=engine).loc[0][0]
-    total_iter = math.ceil(n_row / chunksize)
+def read_sql_with_progress(query, engine, chunksize=10000):
+
+    chunks = pd.read_sql(query, con=engine, chunksize=chunksize)
 
     df = pd.DataFrame()
-    with tqdm(total=total_iter) as progress_bar:
-        for i in range(0, total_iter):
-            cdf = pd.read_sql(query, con=engine)
-            df = pd.concat([df, cdf])
-            progress_bar.update(chunksize)
+    for chunk in tqdm(chunks):
+        df = pd.concat([df, chunk])
 
     return df
 

@@ -1,8 +1,12 @@
+import warnings
 from unittest import TestCase
-from hana2py import utilities as u
+from dotenv import load_dotenv
 import pandas as pd
+from hana2py import utilities as u
 
-iris = pd.read_csv('hana2py/data/iris.csv')
+load_dotenv()
+
+IRIS = pd.read_csv('hana2py/data/iris.csv')
 
 class Test(TestCase):
     """
@@ -10,7 +14,7 @@ class Test(TestCase):
     """
 
     def test_millify_float_return_string(self):
-        num = iris.sepal_length.tolist()[0]*1e3
+        num = IRIS.sepal_length.tolist()[0]*1e3
         millify_num = u.millify(num)
         print(millify_num)
         assert millify_num == '5k'
@@ -30,8 +34,13 @@ class Test(TestCase):
         assert server == 'my_server'
 
     def test_get_sqlserver_none_detail(self):
-        with self.assertWarns(UserWarning):
+
+        with warnings.catch_warnings(record=True) as warn:
+            warnings.simplefilter("always")
             u.get_sqlserver_connection_details('incorrect_key')
+            assert len(warn) == 1
+            assert issubclass(warn[-1].category, UserWarning)
+            assert ".env" in str(warn[-1].message)
 
     def test_sqlserver_engine_exception(self):
         server = None
